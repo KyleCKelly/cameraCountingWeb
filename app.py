@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, jsonify, request, send_file
 from camera import Camera
 import json
@@ -84,5 +83,4 @@ def load_config():
         return jsonify(success=True)
     return jsonify(success=False, error="No file provided")
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+# The __main__ block has been removed for Apache to handle app startup
