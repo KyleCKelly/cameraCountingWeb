@@ -1,0 +1,32 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Counting Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="occupancy-header">
+        <h1 id="total-currently-in">Current Occupancy: {{ total_currently_in }}</h1>
+        <h2>Occupancy Limit: <strong>{{ occupancy_limit }}</strong></h2>
+    </div>
+
+    <div id="camera-grid" class="camera-grid">
+        <!-- Camera Boxes will be dynamically loaded here -->
+    </div>
+
+    <div class="bottom-buttons">
+        <button onclick="prevPage()">← Prev Page</button>
+        <button onclick="setOccupancyLimit()">Occupancy Limit</button>
+        <button onclick="resetCounts()">Reset Counts</button>
+        <button onclick="exportConfig()">Export Config</button>
+        <button onclick="loadConfig()">Load Config</button>
+        <button onclick="nextPage()">Next Page →</button>
+        <button id="return-button" onclick="returnToDashboard()" style="display: none;">Return</button>
+    </div>    
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
