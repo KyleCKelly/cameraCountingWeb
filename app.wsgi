@@ -1,11 +1,8 @@
 import sys
 import os
-import logging
-from app import app as application  # Adjust if the app is located in another module
 
-# Configure basic logging to capture errors in the Apache logs
-logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+# Path to your Flask app's directory
+sys.path.insert(0, "/var/www/cameraCountingWeb")
 
-# Add the project directory to the Python path
-project_dir = os.path.dirname(__file__)
-sys.path.insert(0, project_dir)
+# Import your app object as 'application' for WSGI
+from app import app as application  # Make sure 'app' matches the Flask app name in app.py
