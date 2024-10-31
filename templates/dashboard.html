@@ -1,4 +1,3 @@
-<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,12 +8,17 @@
 </head>
 <body>
     <div id="occupancy-header">
-        <h1 id="total-currently-in">Current Occupancy: {{ total_currently_in }}</h1>
-        <h2>Occupancy Limit: <strong>{{ occupancy_limit }}</strong></h2>
+        <h1 id="total-currently-in">
+            Current Occupancy: {{ total_currently_in }}
+        </h1>
+        <h2>
+            Occupancy Limit:
+            <strong>{{ occupancy_limit }}</strong>
+        </h2>
     </div>
 
     <div id="camera-grid" class="camera-grid">
-        <!-- Camera Boxes will be dynamically loaded here -->
+        <!-- Camera and Zone Boxes will be dynamically loaded here -->
     </div>
 
     <div class="bottom-buttons">

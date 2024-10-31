@@ -143,20 +143,29 @@ function renderMainDashboard(cameraData) {
 function renderZoneBox(zone, cameraData, container) {
     const zoneBox = document.createElement("div");
     zoneBox.className = "zone-box";
-    zoneBox.ondrop = (event) => dropCameraToZone(event, zone.id); // Enable drop
-    zoneBox.ondragover = allowDrop; // Allow dragover
+    zoneBox.ondrop = (event) => dropCameraToZone(event, zone.id);
+    zoneBox.ondragover = allowDrop;
 
     const enteredCount = zone.cameras.reduce((acc, camIdx) => acc + cameraData[camIdx].entered, 0);
     const exitedCount = zone.cameras.reduce((acc, camIdx) => acc + cameraData[camIdx].exited, 0);
     const currentlyIn = enteredCount - exitedCount;
+    const occupancyLimit = zone.occupancy_limit || Infinity;
+
+    if (currentlyIn > occupancyLimit) {
+        zoneBox.classList.add("zone-over-limit");
+    } else {
+        zoneBox.classList.remove("zone-over-limit");
+    }
 
     zoneBox.innerHTML = `
         <h3>${zone.name}</h3>
         <p>Entered: ${enteredCount}</p>
         <p>Exited: ${exitedCount}</p>
         <p>Currently In: ${currentlyIn}</p>
+        <p>Zone Occupancy Limit: ${occupancyLimit}</p>
         <div class="button-group">
             <button onclick="enterZoneView('${zone.id}')">View Zone</button>
+            <button onclick="setZoneOccupancyLimit('${zone.id}')">Set Limit</button>
             ${zone.cameras.length === 0 ? `<button onclick="removeZone('${zone.id}')">Remove</button>` : ""}
         </div>
     `;
@@ -307,9 +316,7 @@ function setOccupancyLimit() {
     if (limit) {
         fetch("/set_occupancy_limit", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ occupancy_limit: limit })
         })
         .then(response => response.json())
@@ -323,25 +330,29 @@ function setOccupancyLimit() {
     }
 }
 
+function setZoneOccupancyLimit(zoneId) {
+    let limit = prompt("Enter new occupancy limit for this zone:");
+    if (limit) {
+        fetch("/set_zone_occupancy_limit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zone_id: zoneId, occupancy_limit: limit })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePage();
+            } else {
+                alert("Failed to set occupancy limit for zone.");
+            }
+        });
+    }
+}
+
 // Initialization on page load
 document.addEventListener("DOMContentLoaded", () => {
     updatePage();
     setInterval(updatePage, 5000); // Refresh every 5 seconds
-
-    const returnButton = document.createElement("button");
-    returnButton.id = "return-button";
-    returnButton.textContent = "Return";
-    returnButton.style.display = "none";
-    returnButton.onclick = returnToDashboard;
-    document.querySelector(".bottom-buttons").appendChild(returnButton);
-
-    // Attach event listeners to bottom buttons
-    document.getElementById("next-page-button").addEventListener("click", nextPage);
-    document.getElementById("prev-page-button").addEventListener("click", prevPage);
-    document.getElementById("load-config-button").addEventListener("click", loadConfig);
-    document.getElementById("export-config-button").addEventListener("click", exportConfig);
-    document.getElementById("reset-counts-button").addEventListener("click", resetCounts);
-    document.getElementById("set-occupancy-limit-button").addEventListener("click", setOccupancyLimit);
 });
 
 // Pagination controls

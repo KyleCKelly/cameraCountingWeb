@@ -132,6 +132,17 @@ body {
     cursor: pointer;
 }
 
+/* Flashing effect for zone when over occupancy limit */
+.zone-over-limit {
+    animation: flash-red 1s infinite alternate;
+}
+
+/* Flashing red animation */
+@keyframes flash-red {
+    from { background-color: #b533ff; }
+    to { background-color: #eb3b3b; }
+}
+
 /* Bottom Buttons Styling */
 .bottom-buttons {
     position: fixed;

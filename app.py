@@ -8,43 +8,39 @@ app = Flask(__name__)
 # Initialize variables
 cameras = []
 occupancy_limit = 100
-config_path = "ReloadConfig.json"
+zones = []  # Format: [{"id": "zone-0", "name": "Zone 1", "cameras": [1, 2], "occupancy_limit": 10}]
+config_path = "camera_config.json"
 
-# Function to load configuration on startup
 def load_config():
-    global occupancy_limit
+    global occupancy_limit, zones
     if os.path.exists(config_path):
         with open(config_path, 'r') as config_file:
             config_data = json.load(config_file)
-            # Clear current cameras and load from config
+            # Load cameras and occupancy limit
             cameras.clear()
             for cam in config_data.get("cameras", []):
                 new_camera = Camera(cam['ip'], cam['username'], cam['password'])
                 cameras.append(new_camera)
-            # Set occupancy limit from config
             occupancy_limit = config_data.get("occupancy_limit", 100)
+            # Load zones with occupancy limits
+            zones = config_data.get("zones", [])
 
-# Function to save configuration after changes
 def save_config():
     config_data = {
         "cameras": [{"ip": cam.ip, "username": cam.username, "password": cam.password} for cam in cameras],
-        "occupancy_limit": occupancy_limit
+        "occupancy_limit": occupancy_limit,
+        "zones": zones  # Save zones with occupancy limits
     }
     with open(config_path, 'w') as config_file:
         json.dump(config_data, config_file, indent=4)
 
-# Load configuration on app startup
-load_config()
-
 @app.route('/')
 def dashboard():
-    # Calculate the total currently in by summing up each camera's currently_in value
     total_currently_in = sum(camera.get_counts()[2] for camera in cameras)
-    return render_template('dashboard.html', total_currently_in=total_currently_in, occupancy_limit=occupancy_limit, camera_count=len(cameras))
+    return render_template('dashboard.html', total_currently_in=total_currently_in, occupancy_limit=occupancy_limit, zones=zones)
 
 @app.route('/get_cameras', methods=['GET'])
 def get_cameras():
-    # Collect data for each camera dynamically
     camera_data = [
         {
             "entered": camera.get_counts()[0],
@@ -53,10 +49,8 @@ def get_cameras():
         }
         for camera in cameras
     ]
-    # Calculate total currently in by summing each camera's currently_in value
     total_currently_in = sum(cam["currently_in"] for cam in camera_data)
-    print("Camera data:", camera_data)  # Debugging: Confirm data is sent to the client
-    return jsonify(cameras=camera_data, total_currently_in=total_currently_in)
+    return jsonify(cameras=camera_data, zones=zones, total_currently_in=total_currently_in)
 
 @app.route('/add_camera', methods=['POST'])
 def add_camera():
@@ -66,16 +60,15 @@ def add_camera():
     if ip and username and password:
         new_camera = Camera(ip, username, password)
         cameras.append(new_camera)
-        save_config()  # Save configuration after adding a camera
+        save_config()
         return jsonify(success=True)
-    else:
-        return jsonify(success=False, error="Invalid camera details")
+    return jsonify(success=False, error="Invalid camera details")
 
 @app.route('/remove_camera/<int:index>', methods=['POST'])
 def remove_camera(index):
     try:
         del cameras[index]
-        save_config()  # Save configuration after removing a camera
+        save_config()
         return jsonify(success=True)
     except IndexError:
         return jsonify(success=False, error="Invalid camera index")
@@ -90,15 +83,23 @@ def reset_counts():
 def set_occupancy_limit():
     global occupancy_limit
     occupancy_limit = int(request.json.get('occupancy_limit'))
-    save_config()  # Save configuration after changing occupancy limit
+    save_config()
     return jsonify(success=True)
+
+@app.route('/set_zone_occupancy_limit', methods=['POST'])
+def set_zone_occupancy_limit():
+    zone_id = request.json.get('zone_id')
+    limit = int(request.json.get('occupancy_limit', 0))
+    for zone in zones:
+        if zone['id'] == zone_id:
+            zone['occupancy_limit'] = limit
+            save_config()
+            return jsonify(success=True)
+    return jsonify(success=False, error="Zone not found")
 
 @app.route('/export_config', methods=['GET'])
 def export_config():
-    config_data = [{"ip": cam.ip, "username": cam.username, "password": cam.password} for cam in cameras]
-    config_path = "camera_config.json"
-    with open(config_path, 'w') as config_file:
-        json.dump(config_data, config_file, indent=4)
+    save_config()  # Ensure config is saved before export
     return send_file(config_path, as_attachment=True)
 
 @app.route('/load_config', methods=['POST'])
@@ -107,11 +108,16 @@ def load_config_route():
     if file:
         config_data = json.load(file)
         cameras.clear()
-        for cam in config_data:
+        for cam in config_data.get("cameras", []):
             new_camera = Camera(cam['ip'], cam['username'], cam['password'])
             cameras.append(new_camera)
-        save_config()  # Save configuration after loading new config
+        occupancy_limit = config_data.get("occupancy_limit", 100)
+        zones.extend(config_data.get("zones", []))
+        save_config()
         return jsonify(success=True)
     return jsonify(success=False, error="No file provided")
+
+# Load config on startup
+load_config()
 
 # The __main__ block has been removed for Apache to handle app startup
