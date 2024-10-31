@@ -8,6 +8,33 @@ app = Flask(__name__)
 # Initialize variables
 cameras = []
 occupancy_limit = 100
+config_path = "ReloadConfig.json"
+
+# Function to load configuration on startup
+def load_config():
+    global occupancy_limit
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as config_file:
+            config_data = json.load(config_file)
+            # Clear current cameras and load from config
+            cameras.clear()
+            for cam in config_data.get("cameras", []):
+                new_camera = Camera(cam['ip'], cam['username'], cam['password'])
+                cameras.append(new_camera)
+            # Set occupancy limit from config
+            occupancy_limit = config_data.get("occupancy_limit", 100)
+
+# Function to save configuration after changes
+def save_config():
+    config_data = {
+        "cameras": [{"ip": cam.ip, "username": cam.username, "password": cam.password} for cam in cameras],
+        "occupancy_limit": occupancy_limit
+    }
+    with open(config_path, 'w') as config_file:
+        json.dump(config_data, config_file, indent=4)
+
+# Load configuration on app startup
+load_config()
 
 @app.route('/')
 def dashboard():
@@ -39,6 +66,7 @@ def add_camera():
     if ip and username and password:
         new_camera = Camera(ip, username, password)
         cameras.append(new_camera)
+        save_config()  # Save configuration after adding a camera
         return jsonify(success=True)
     else:
         return jsonify(success=False, error="Invalid camera details")
@@ -47,6 +75,7 @@ def add_camera():
 def remove_camera(index):
     try:
         del cameras[index]
+        save_config()  # Save configuration after removing a camera
         return jsonify(success=True)
     except IndexError:
         return jsonify(success=False, error="Invalid camera index")
@@ -61,6 +90,7 @@ def reset_counts():
 def set_occupancy_limit():
     global occupancy_limit
     occupancy_limit = int(request.json.get('occupancy_limit'))
+    save_config()  # Save configuration after changing occupancy limit
     return jsonify(success=True)
 
 @app.route('/export_config', methods=['GET'])
@@ -72,7 +102,7 @@ def export_config():
     return send_file(config_path, as_attachment=True)
 
 @app.route('/load_config', methods=['POST'])
-def load_config():
+def load_config_route():
     file = request.files.get('config_file')
     if file:
         config_data = json.load(file)
@@ -80,6 +110,7 @@ def load_config():
         for cam in config_data:
             new_camera = Camera(cam['ip'], cam['username'], cam['password'])
             cameras.append(new_camera)
+        save_config()  # Save configuration after loading new config
         return jsonify(success=True)
     return jsonify(success=False, error="No file provided")
 
